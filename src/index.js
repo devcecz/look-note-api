@@ -7,11 +7,23 @@ const notesRoutes = require('./routes/notes');
 const foldersRoutes = require('./routes/folders');
 const trialRoutes = require('./routes/trial');
 const agendaRoutes = require('./routes/agenda');
+const pool = require('./config/db');
 
 const app = express();
 
 app.use(cors());
 app.use(express.json());
+
+app.get('/app-config', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT key, value FROM app_config');
+    const config = {};
+    result.rows.forEach(row => config[row.key] = row.value);
+    res.json(config);
+  } catch (err) {
+    res.status(500).json({ error: 'Error al obtener config' });
+  }
+});
 
 app.get('/', (req, res) => {
   res.json({ message: 'Look Note API running 🚀' });
