@@ -7,7 +7,9 @@ const notesRoutes = require('./routes/notes');
 const foldersRoutes = require('./routes/folders');
 const trialRoutes = require('./routes/trial');
 const agendaRoutes = require('./routes/agenda');
+const devicesRoutes = require('./routes/devices');
 const pool = require('./config/db');
+const { startReminderCron } = require('./cron/reminderCron');
 
 const app = express();
 
@@ -34,6 +36,9 @@ app.use('/notes', notesRoutes);
 app.use('/folders', foldersRoutes);
 app.use('/trial', trialRoutes);
 app.use('/agenda', agendaRoutes);
+app.use('/devices', devicesRoutes);
+
+startReminderCron();
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
