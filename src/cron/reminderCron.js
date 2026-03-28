@@ -2,7 +2,6 @@ const cron = require('node-cron');
 const pool = require('../config/db');
 const admin = require('firebase-admin');
 
-// Inicializar Firebase Admin
 if (!admin.apps.length) {
   admin.initializeApp({
     credential: admin.credential.cert({
@@ -30,16 +29,17 @@ const sendPush = async (fcmToken, title, body) => {
 };
 
 const startReminderCron = () => {
-  // Corre cada minuto
   cron.schedule('* * * * *', async () => {
     try {
       const now = new Date();
+      console.log(`⏰ Cron corriendo: ${now.toISOString()}`);
+
+      // ✅ Query simplificado sin JOIN a used_trials
       const result = await pool.query(`
         SELECT 
           ae.id, ae.title, ae.description, ae.start_date, ae.reminder_interval,
           u.fcm_token
         FROM agenda_events ae
-        JOIN used_trials ut ON ut.user_id = ae.user_id
         JOIN users u ON u.id = ae.user_id
         WHERE 
           ae.is_deleted = false
@@ -47,6 +47,8 @@ const startReminderCron = () => {
           AND ae.reminder_sent = false
           AND u.fcm_token IS NOT NULL
       `);
+
+      console.log(`📋 Eventos encontrados: ${result.rows.length}`);
 
       for (const event of result.rows) {
         const startDate = new Date(event.start_date);
@@ -62,7 +64,8 @@ const startReminderCron = () => {
         const reminderTime = new Date(startDate.getTime() - minutesBefore * 60000);
         const diffMs = Math.abs(reminderTime.getTime() - now.getTime());
 
-        // Si la diferencia es menor a 1 minuto, enviar push
+        console.log(`📅 Evento: ${event.title} | reminderTime: ${reminderTime.toISOString()} | diff: ${diffMs}ms`);
+
         if (diffMs < 60000) {
           await sendPush(
             event.fcm_token,
@@ -72,7 +75,6 @@ const startReminderCron = () => {
               : `Tu evento empieza en ${reminderInterval}`
           );
 
-          // Marcar como enviado
           await pool.query(
             'UPDATE agenda_events SET reminder_sent = true WHERE id = $1',
             [event.id]
@@ -80,7 +82,7 @@ const startReminderCron = () => {
         }
       }
     } catch (e) {
-      console.error('❌ Error en cron de recordatorios:', e.message);
+      console.error('❌ Error en cron:', e.message);
     }
   });
 
