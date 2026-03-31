@@ -4,6 +4,6 @@ const { uploadAudio, deleteAudio, upload } = require('../controllers/audioContro
 const verifyToken = require('../middlewares/auth');
 
 router.post('/upload', verifyToken, upload.single('audio'), uploadAudio);
-router.delete('/:filename(*)', verifyToken, deleteAudio);
+router.delete('/:filename', verifyToken, deleteAudio);
 
 module.exports = router;
