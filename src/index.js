@@ -10,11 +10,13 @@ const agendaRoutes = require('./routes/agenda');
 const devicesRoutes = require('./routes/devices');
 const pool = require('./config/db');
 const { startReminderCron } = require('./cron/reminderCron');
+const audioRoutes = require('./routes/audio');
 
 const app = express();
 
 app.use(cors());
 app.use(express.json());
+app.use('/audio', audioRoutes);
 
 app.get('/app-config', async (req, res) => {
   try {
