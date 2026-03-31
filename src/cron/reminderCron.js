@@ -34,7 +34,6 @@ const startReminderCron = () => {
       const now = new Date();
       console.log(`⏰ Cron corriendo: ${now.toISOString()}`);
 
-      // ✅ Query simplificado sin JOIN a used_trials
       const result = await pool.query(`
         SELECT 
           ae.id, ae.title, ae.description, ae.start_date, ae.reminder_interval,
@@ -55,18 +54,20 @@ const startReminderCron = () => {
         const reminderInterval = event.reminder_interval;
 
         let minutesBefore = 0;
-        if (reminderInterval === '5min') minutesBefore = 5;
+        if (reminderInterval === '5min')  minutesBefore = 5;
         else if (reminderInterval === '15min') minutesBefore = 15;
         else if (reminderInterval === '30min') minutesBefore = 30;
-        else if (reminderInterval === '1h') minutesBefore = 60;
-        else if (reminderInterval === '1d') minutesBefore = 1440;
+        else if (reminderInterval === '1h')    minutesBefore = 60;
+        else if (reminderInterval === '1d')    minutesBefore = 1440;
 
         const reminderTime = new Date(startDate.getTime() - minutesBefore * 60000);
-        const diffMs = Math.abs(reminderTime.getTime() - now.getTime());
+        const diffMs = reminderTime.getTime() - now.getTime();
+        const minutesLate = Math.floor(Math.abs(diffMs) / 60000);
 
-        console.log(`📅 Evento: ${event.title} | reminderTime: ${reminderTime.toISOString()} | diff: ${diffMs}ms`);
+        console.log(`📅 Evento: ${event.title} | reminderTime: ${reminderTime.toISOString()} | diffMs: ${diffMs}`);
 
-        if (diffMs < 60000) {
+        // ✅ Caso 1: es hora exacta (ventana de 1 minuto) — push normal
+        if (diffMs >= -60000 && diffMs <= 0) {
           await sendPush(
             event.fcm_token,
             `📅 ${event.title}`,
@@ -74,7 +75,24 @@ const startReminderCron = () => {
               ? 'Tu evento es mañana'
               : `Tu evento empieza en ${reminderInterval}`
           );
+          console.log(`🔔 Push normal enviada: ${event.title}`);
 
+        // ✅ Caso 2: llegó tarde pero menos de 60 min — push con aviso de retraso
+        } else if (diffMs < -60000 && minutesLate <= 60) {
+          await sendPush(
+            event.fcm_token,
+            `📅 ${event.title}`,
+            `Recordatorio tardío — hace ${minutesLate} min`
+          );
+          console.log(`⚠️ Push tardía enviada (${minutesLate} min tarde): ${event.title}`);
+
+        // ✅ Caso 3: pasaron más de 60 min — marca sin push para no spamear
+        } else if (diffMs < -60000 && minutesLate > 60) {
+          console.log(`⏭️ Reminder expirado (${minutesLate} min tarde), marcando sin push: ${event.title}`);
+        }
+
+        // ✅ En los 3 casos marca reminder_sent = true para no reintentar
+        if (diffMs <= 0) {
           await pool.query(
             'UPDATE agenda_events SET reminder_sent = true WHERE id = $1',
             [event.id]
