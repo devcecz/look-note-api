@@ -23,9 +23,9 @@ const activateTrial = async (req, res) => {
       });
     }
 
-    // Activar trial nuevo (30 días)
+    // Activar trial nuevo (90 días)
     const endDate = new Date();
-    endDate.setDate(endDate.getDate() + 30);
+    endDate.setDate(endDate.getDate() + 90);
 
     await pool.query(
       `INSERT INTO used_trials (user_id, start_date, end_date, created_at)
@@ -42,7 +42,7 @@ const activateTrial = async (req, res) => {
 
     res.json({
       active: true,
-      diasRestantes: 30,
+      diasRestantes: 90,
       mensaje: 'Trial activado exitosamente'
     });
 
