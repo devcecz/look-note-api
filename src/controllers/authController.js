@@ -64,4 +64,34 @@ const googleLogin = async (req, res) => {
   }
 };
 
-module.exports = { googleLogin };
+const saveFolderOrder = async (req, res) => {
+  const userId = req.userId;
+  const { folder_order } = req.body;
+
+  try {
+    await pool.query(
+      'UPDATE users SET folder_order = $1 WHERE id = $2',
+      [JSON.stringify(folder_order), userId]
+    );
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error guardando orden:', error);
+    res.status(500).json({ error: 'Error al guardar orden' });
+  }
+};
+
+const getFolderOrder = async (req, res) => {
+  const userId = req.userId;
+  try {
+    const result = await pool.query(
+      'SELECT folder_order FROM users WHERE id = $1',
+      [userId]
+    );
+    const order = result.rows[0]?.folder_order;
+    res.json({ folder_order: order ? JSON.parse(order) : [] });
+  } catch (error) {
+    res.status(500).json({ error: 'Error al obtener orden' });
+  }
+};
+
+module.exports = { googleLogin, saveFolderOrder, getFolderOrder };
