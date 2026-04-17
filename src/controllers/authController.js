@@ -1,6 +1,7 @@
 const pool = require('../config/db');
 const jwt = require('jsonwebtoken');
 const { OAuth2Client } = require('google-auth-library');
+const appleSignin = require('apple-signin-auth');
 
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
@@ -64,6 +65,76 @@ const googleLogin = async (req, res) => {
   }
 };
 
+const appleLogin = async (req, res) => {
+  const { identityToken, fullName, email } = req.body;
+
+  if (!identityToken) {
+    return res.status(400).json({ error: 'identityToken requerido' });
+  }
+
+  try {
+    const applePayload = await appleSignin.verifyIdToken(identityToken, {
+      audience: 'cecz.looknote.app',
+      ignoreExpiration: false,
+    });
+
+    const appleId = applePayload.sub;
+    const appleEmail = email || applePayload.email || `${appleId}@privaterelay.appleid.com`;
+    const appleName = fullName || applePayload.email?.split('@')[0] || 'Usuario';
+
+    // Buscar o crear usuario
+    let user = await pool.query(
+      'SELECT * FROM users WHERE apple_id = $1',
+      [appleId]
+    );
+
+    if (user.rows.length === 0) {
+      // Verificar si ya existe con ese email
+      const existingEmail = await pool.query(
+        'SELECT * FROM users WHERE email = $1',
+        [appleEmail]
+      );
+
+      if (existingEmail.rows.length > 0) {
+        // Vincular apple_id al usuario existente
+        user = await pool.query(
+          'UPDATE users SET apple_id = $1 WHERE email = $2 RETURNING *',
+          [appleId, appleEmail]
+        );
+      } else {
+        // Crear nuevo usuario
+        user = await pool.query(
+          `INSERT INTO users (apple_id, email, name, picture, created_at)
+           VALUES ($1, $2, $3, $4, NOW()) RETURNING *`,
+          [appleId, appleEmail, appleName, null]
+        );
+      }
+    }
+
+    const dbUser = user.rows[0];
+
+    const token = jwt.sign(
+      { userId: dbUser.id, email: dbUser.email },
+      process.env.JWT_SECRET,
+      { expiresIn: '30d' }
+    );
+
+    res.json({
+      token,
+      user: {
+        id: dbUser.id,
+        email: dbUser.email,
+        name: dbUser.name,
+        picture: dbUser.picture,
+      }
+    });
+
+  } catch (error) {
+    console.error('Error en appleLogin:', error);
+    res.status(401).json({ error: 'Token de Apple inválido' });
+  }
+};
+
 const saveFolderOrder = async (req, res) => {
   const userId = req.userId;
   const { folder_order } = req.body;
@@ -94,4 +165,4 @@ const getFolderOrder = async (req, res) => {
   }
 };
 
-module.exports = { googleLogin, saveFolderOrder, getFolderOrder };
+module.exports = { googleLogin, appleLogin, saveFolderOrder, getFolderOrder };
