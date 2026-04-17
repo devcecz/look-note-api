@@ -130,7 +130,7 @@ const appleLogin = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error en appleLogin:', error);
+    console.error('Error en appleLogin:', error.message || error);
     res.status(401).json({ error: 'Token de Apple inválido' });
   }
 };
