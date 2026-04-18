@@ -3,7 +3,15 @@ const jwt = require('jsonwebtoken');
 const { OAuth2Client } = require('google-auth-library');
 const appleSignin = require('apple-signin-auth');
 
-const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+// ✅ Inicializar sin CLIENT_ID específico
+const client = new OAuth2Client();
+
+// ✅ Lista de CLIENT_IDs válidos (Android + iOS)
+// filter(Boolean) quita undefined si alguna variable no está seteada
+const VALID_GOOGLE_CLIENT_IDS = [
+  process.env.GOOGLE_CLIENT_ID,       // Android (existente, no se toca)
+  process.env.GOOGLE_CLIENT_ID_IOS,   // iOS (nueva variable)
+].filter(Boolean);
 
 const googleLogin = async (req, res) => {
   const { idToken } = req.body;
@@ -15,11 +23,13 @@ const googleLogin = async (req, res) => {
   try {
     const ticket = await client.verifyIdToken({
       idToken,
-      audience: process.env.GOOGLE_CLIENT_ID,
+      audience: VALID_GOOGLE_CLIENT_IDS, // ✅ Array de audiences válidos
     });
 
     const payload = ticket.getPayload();
     const { sub: googleId, email, name, picture } = payload;
+
+    console.log(`✅ Google login exitoso: ${email} (audience: ${payload.aud})`);
 
     // Buscar o crear usuario
     let user = await pool.query(
@@ -60,8 +70,8 @@ const googleLogin = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error en googleLogin:', error);
-    res.status(401).json({ error: 'Token de Google inválido' });
+    console.error('Error en googleLogin:', error.message || error);
+    res.status(401).json({ error: 'Token de Google inválido', details: error.message });
   }
 };
 
