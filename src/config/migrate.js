@@ -27,6 +27,7 @@ const migrate = async () => {
         audio_path TEXT,
         is_transcribed BOOLEAN DEFAULT false,
         show_on_lock_screen BOOLEAN DEFAULT false,
+        is_protected BOOLEAN DEFAULT false,
         reminder_date_time TIMESTAMP,
         reminder_interval VARCHAR(100),
         reminder_end_date TIMESTAMP,
@@ -65,12 +66,18 @@ const migrate = async () => {
         end_date TIMESTAMP NOT NULL,
         created_at TIMESTAMP DEFAULT NOW()
       );
+
+      -- ─────────────────────────────────────────
+      -- ✅ MIGRACIONES: agregar columnas a tablas
+      --    que ya existen (idempotente)
+      -- ─────────────────────────────────────────
+      ALTER TABLE notes ADD COLUMN IF NOT EXISTS is_protected BOOLEAN DEFAULT false;
     `);
 
-    console.log('✅ Tablas creadas exitosamente');
+    console.log('✅ Tablas y migraciones aplicadas exitosamente');
     process.exit(0);
   } catch (error) {
-    console.error('❌ Error creando tablas:', error);
+    console.error('❌ Error en migración:', error);
     process.exit(1);
   }
 };

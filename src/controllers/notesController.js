@@ -17,6 +17,7 @@ const createNote = async (req, res) => {
   const {
     id, title, content, theme_id, is_checklist, checklist_items,
     checklist_checked, audio_path, is_transcribed, show_on_lock_screen,
+    is_protected,                                           // ✅ NUEVO
     reminder_date_time, reminder_interval, reminder_end_date, folder_id
   } = req.body;
 
@@ -25,14 +26,16 @@ const createNote = async (req, res) => {
       `INSERT INTO notes (
         id, user_id, title, content, theme_id, is_checklist, checklist_items,
         checklist_checked, audio_path, is_transcribed, show_on_lock_screen,
+        is_protected,                                       
         reminder_date_time, reminder_interval, reminder_end_date, folder_id,
         is_archived, is_deleted, created_at, updated_at
-      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,false,false,NOW(),NOW())
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,false,false,NOW(),NOW())
       RETURNING *`,
       [
         id, req.userId, title, content, theme_id, is_checklist,
         JSON.stringify(checklist_items), JSON.stringify(checklist_checked),
         audio_path, is_transcribed, show_on_lock_screen,
+        is_protected || false,                              // ✅ NUEVO
         reminder_date_time, reminder_interval, reminder_end_date, folder_id
       ]
     );
@@ -48,6 +51,7 @@ const updateNote = async (req, res) => {
   const {
     title, content, theme_id, is_checklist, checklist_items,
     checklist_checked, audio_path, is_transcribed, show_on_lock_screen,
+    is_protected,                                           // ✅ NUEVO
     reminder_date_time, reminder_interval, reminder_end_date,
     folder_id, is_archived, is_deleted
   } = req.body;
@@ -57,14 +61,16 @@ const updateNote = async (req, res) => {
       `UPDATE notes SET
         title=$1, content=$2, theme_id=$3, is_checklist=$4, checklist_items=$5,
         checklist_checked=$6, audio_path=$7, is_transcribed=$8,
-        show_on_lock_screen=$9, reminder_date_time=$10, reminder_interval=$11,
-        reminder_end_date=$12, folder_id=$13, is_archived=$14, is_deleted=$15,
+        show_on_lock_screen=$9, is_protected=$10,           
+        reminder_date_time=$11, reminder_interval=$12,
+        reminder_end_date=$13, folder_id=$14, is_archived=$15, is_deleted=$16,
         updated_at=NOW()
-       WHERE id=$16 AND user_id=$17 RETURNING *`,
+       WHERE id=$17 AND user_id=$18 RETURNING *`,
       [
         title, content, theme_id, is_checklist,
         JSON.stringify(checklist_items), JSON.stringify(checklist_checked),
         audio_path, is_transcribed, show_on_lock_screen,
+        is_protected || false,                              // ✅ NUEVO
         reminder_date_time, reminder_interval, reminder_end_date,
         folder_id, is_archived, is_deleted, id, req.userId
       ]
