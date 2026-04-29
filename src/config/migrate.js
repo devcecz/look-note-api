@@ -43,6 +43,7 @@ const migrate = async () => {
         user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
         name VARCHAR(255) NOT NULL,
         color VARCHAR(100),
+        position INTEGER DEFAULT 0,
         created_at TIMESTAMP DEFAULT NOW(),
         updated_at TIMESTAMP DEFAULT NOW()
       );
@@ -72,6 +73,7 @@ const migrate = async () => {
       --    que ya existen (idempotente)
       -- ─────────────────────────────────────────
       ALTER TABLE notes ADD COLUMN IF NOT EXISTS is_protected BOOLEAN DEFAULT false;
+      ALTER TABLE folders ADD COLUMN IF NOT EXISTS position INTEGER DEFAULT 0;
     `);
 
     console.log('✅ Tablas y migraciones aplicadas exitosamente');
